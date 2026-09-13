@@ -1,13 +1,10 @@
 import type {Plugin} from "@opencode/plugin"
 
 type PluginContext = Plugin.Context
-import {ModelStatusCache} from '../cache/model-status-cache'
 import {getLoadedModels} from './get-loaded-models'
 import {normalizeBaseURL} from '../utils/llama-cpp-api'
-import {categorizeError, findSimilarModels, retryWithBackoff} from '../utils'
+import {categorizeError, retryWithBackoff} from '../utils'
 import {log} from '../utils/log'
-
-const modelStatusCache = new ModelStatusCache()
 
 export async function createChatParamsHook(ctx: PluginContext): Promise<(() => Promise<void>) | void> {
     // Register session context hook for model validation
