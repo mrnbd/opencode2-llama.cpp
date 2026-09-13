@@ -1,4 +1,5 @@
 import type {CacheStats} from '../types'
+import {log} from '../utils/log'
 
 // Model Status Cache for reducing API calls
 export class ModelStatusCache {
@@ -42,7 +43,7 @@ export class ModelStatusCache {
         } catch (error) {
             // If we have stale cached data, return it as fallback but mark as potentially invalid
             if (cached) {
-                console.warn(`[opencode-llama-cpp] Using stale cache data due to fetch error`, {
+                log.warn("Using stale cache data due to fetch error", {
                     baseURL,
                     age: now - cached.timestamp,
                     error: error instanceof Error ? error.message : String(error)
@@ -60,14 +61,14 @@ export class ModelStatusCache {
     // Invalidate cache for specific URL
     invalidate(baseURL: string): void {
         this.cache.delete(baseURL)
-        console.debug(`[opencode-llama-cpp:DEBUG] Invalidated cache entry`, {baseURL})
+        log.debug("Invalidated cache entry", {baseURL})
     }
 
     // Invalidate entire cache
     invalidateAll(): void {
         const size = this.cache.size
         this.cache.clear()
-        console.debug(`[opencode-llama-cpp:DEBUG] Cleared entire cache`, {previousSize: size})
+        log.debug("Cleared entire cache", {previousSize: size})
     }
 
     // Force refresh for specific URL (useful after model changes)
@@ -95,7 +96,7 @@ export class ModelStatusCache {
         const cached = this.cache.get(baseURL)
         if (cached) {
             cached.ttl = ttl
-            console.debug(`[opencode-llama-cpp:DEBUG] Updated TTL for cache entry`, {baseURL, ttl})
+            log.debug("Updated TTL for cache entry", {baseURL, ttl})
         }
     }
 
@@ -121,7 +122,7 @@ export class ModelStatusCache {
         toDelete.forEach(baseURL => this.cache.delete(baseURL))
 
         if (toDelete.length > 0) {
-            console.debug(`[opencode-llama-cpp:DEBUG] Cleaned up cache entries`, {
+            log.debug("Cleaned up cache entries", {
                 deleted: toDelete.length,
                 remaining: this.cache.size
             })

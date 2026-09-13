@@ -1,45 +1,38 @@
-import type {Plugin, PluginInput} from "@opencode-ai/plugin"
-import {ToastNotifier} from '../ui/toast-notifier'
+import {Plugin} from "@opencode/plugin"
 import {createConfigHook} from './config-hook'
-import {createEventHook} from './event-hook'
 import {createChatParamsHook} from './chat-params-hook'
+import {createEventHook} from './event-hook'
+import {log} from '../utils/log'
 
 /**
- * llama.cpp Plugin - Enhanced Modular Version
+ * llama.cpp Plugin - V2 Version
  *
  * Features:
  * - Auto-detection of running llama.cpp instance
  * - Dynamic model discovery from llama.cpp API
  * - Real-time model validation with smart error handling
- * - Comprehensive caching system with 80%+ API call reduction
- * - Model loading state monitoring with progress tracking
+ * - Comprehensive caching system with API call reduction
  * - Toast notifications for better UX
- * - Intelligent model suggestions and error recovery
  */
-export const LlamaCppPlugin: Plugin = async (input: PluginInput) => {
-    console.log("[opencode-llama-cpp] llama.cpp plugin initialized")
+export const LlamaCppPlugin = Plugin.define({
+    id: "llama-cpp",
+    async setup(ctx) {
+        log.info("llama.cpp plugin initialized")
 
-    const {client} = input
+        // Register catalog transform for auto-detection and model discovery
+        const configCleanup = await createConfigHook(ctx)
 
-    // Validate client
-    if (!client || typeof client !== 'object') {
-        console.error("[opencode-llama-cpp] Invalid client provided to plugin")
-        return {
-            config: async () => {
-            },
-            event: async () => {
-            },
-            "chat.params": async () => {
-            }
+        // Register session hook for model validation
+        const chatCleanup = await createChatParamsHook(ctx)
+
+        // Register event subscription
+        const eventCleanup = createEventHook(ctx)
+
+        // Return cleanup function
+        return async () => {
+            if (configCleanup) await configCleanup()
+            if (chatCleanup) await chatCleanup()
+            if (eventCleanup) eventCleanup()
         }
-    }
-
-    const toastNotifier = new ToastNotifier(client)
-
-    return {
-        config: createConfigHook(client, toastNotifier),
-        event: createEventHook(),
-        "chat.params": createChatParamsHook(toastNotifier),
-    }
-}
-
+    },
+})

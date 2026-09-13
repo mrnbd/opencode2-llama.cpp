@@ -1,3 +1,5 @@
+import {log} from '../utils/log'
+
 // UI notification system for llama.cpp plugin
 export class ToastNotifier {
     private client: any // OpenCode client
@@ -10,7 +12,7 @@ export class ToastNotifier {
     async success(message: string, title?: string, duration?: number): Promise<void> {
         try {
             if (!this.client?.tui?.showToast) {
-                console.warn('[opencode-llama-cpp] Toast API not available (client.tui.showToast missing)')
+                log.warn('Toast API not available (client.tui.showToast missing)')
                 return
             }
             await this.client.tui.showToast({
@@ -22,7 +24,7 @@ export class ToastNotifier {
                 }
             })
         } catch (error) {
-            console.error(`[opencode-llama-cpp] Failed to show success toast`, error)
+            log.error(`Failed to show success toast`, {error: String(error)})
         }
     }
 
@@ -30,7 +32,7 @@ export class ToastNotifier {
     async error(message: string, title?: string, duration?: number): Promise<void> {
         try {
             if (!this.client?.tui?.showToast) {
-                console.warn('[opencode-llama-cpp] Toast API not available (client.tui.showToast missing)')
+                log.warn('Toast API not available (client.tui.showToast missing)')
                 return
             }
             await this.client.tui.showToast({
@@ -42,7 +44,7 @@ export class ToastNotifier {
                 }
             })
         } catch (error) {
-            console.error(`[opencode-llama-cpp] Failed to show error toast`, error)
+            log.error(`Failed to show error toast`, {error: String(error)})
         }
     }
 
@@ -50,7 +52,7 @@ export class ToastNotifier {
     async warning(message: string, title?: string, duration?: number): Promise<void> {
         try {
             if (!this.client?.tui?.showToast) {
-                console.warn('[opencode-llama-cpp] Toast API not available (client.tui.showToast missing)')
+                log.warn('Toast API not available (client.tui.showToast missing)')
                 return
             }
             await this.client.tui.showToast({
@@ -62,7 +64,7 @@ export class ToastNotifier {
                 }
             })
         } catch (error) {
-            console.error(`[opencode-llama-cpp] Failed to show warning toast`, error)
+            log.error(`Failed to show warning toast`, {error: String(error)})
         }
     }
 
@@ -70,7 +72,7 @@ export class ToastNotifier {
     async info(message: string, title?: string, duration?: number): Promise<void> {
         try {
             if (!this.client?.tui?.showToast) {
-                console.warn('[opencode-llama-cpp] Toast API not available (client.tui.showToast missing)')
+                log.warn('Toast API not available (client.tui.showToast missing)')
                 return
             }
             await this.client.tui.showToast({
@@ -82,7 +84,7 @@ export class ToastNotifier {
                 }
             })
         } catch (error) {
-            console.error(`[opencode-llama-cpp] Failed to show info toast`, error)
+            log.error(`Failed to show info toast`, {error: String(error)})
         }
     }
 
@@ -90,7 +92,7 @@ export class ToastNotifier {
     async progress(message: string, title?: string, progress?: number): Promise<void> {
         try {
             if (!this.client?.tui?.showToast) {
-                console.warn('[opencode-llama-cpp] Toast API not available (client.tui.showToast missing)')
+                log.warn('Toast API not available (client.tui.showToast missing)')
                 return
             }
             await this.client.tui.showToast({
@@ -102,7 +104,7 @@ export class ToastNotifier {
                 }
             })
         } catch (error) {
-            console.error(`[opencode-llama-cpp] Failed to show progress toast`, error)
+            log.error(`Failed to show progress toast`, {error: String(error)})
         }
     }
 
@@ -115,7 +117,7 @@ export class ToastNotifier {
     }): Promise<void> {
         try {
             if (!this.client?.tui?.showToast) {
-                console.warn('[opencode-llama-cpp] Toast API not available (client.tui.showToast missing)')
+                log.warn('Toast API not available (client.tui.showToast missing)')
                 return
             }
             await this.client.tui.showToast({
@@ -127,7 +129,7 @@ export class ToastNotifier {
                 }
             })
         } catch (error) {
-            console.error(`[opencode-llama-cpp] Failed to show detailed toast`, error)
+            log.error(`Failed to show detailed toast`, {error: String(error)})
         }
     }
 }

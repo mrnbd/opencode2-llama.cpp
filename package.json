@@ -38,7 +38,7 @@
     "url": "git+https://github.com/llessi06/opencode-llama.cpp.git"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "^1.1.21"
+    "@opencode/plugin": "latest"
   },
   "devDependencies": {
     "@types/node": "^25.0.9",

@@ -1,4 +1,5 @@
 import type {LoadingStatus, ModelLoadingState} from '../types'
+import {log} from '../utils/log'
 
 // Model Loading State Monitor with periodic polling
 export class ModelLoadingMonitor {
@@ -21,7 +22,7 @@ export class ModelLoadingMonitor {
             progress: 0
         })
 
-        console.info(`[opencode-llama-cpp] Started monitoring model loading`, {modelId, baseURL})
+        log.info(`Started monitoring model loading`, {modelId, baseURL})
 
         // Clear any existing interval
         this.stopMonitoring(modelId)
@@ -48,7 +49,7 @@ export class ModelLoadingMonitor {
         if (interval) {
             clearInterval(interval)
             this.pollingIntervals.delete(modelId)
-            console.debug(`[opencode-llama-cpp:DEBUG] Stopped monitoring model`, {modelId})
+            log.debug(`Stopped monitoring model`, {modelId})
         }
     }
 
@@ -69,7 +70,7 @@ export class ModelLoadingMonitor {
             this.pollingIntervals.delete(modelId)
         }
         this.loadingStates.clear()
-        console.debug(`[opencode-llama-cpp:DEBUG] Cleaned up all monitoring states`)
+        log.debug(`Cleaned up all monitoring states`)
     }
 
     // Check loading progress
@@ -89,7 +90,7 @@ export class ModelLoadingMonitor {
                 const duration = Date.now() - (state.startTime || Date.now())
                 this.updateState(modelId, 'loaded', 100, 0)
                 this.stopMonitoring(modelId)
-                console.info(`[opencode-llama-cpp] Model loading completed`, {
+                log.info(`Model loading completed`, {
                     modelId,
                     duration: `${duration}ms`,
                     totalModels: this.loadingStates.size
@@ -132,11 +133,11 @@ export class ModelLoadingMonitor {
         // Log state changes
         if (currentState.status !== status) {
             if (status === 'loaded') {
-                console.info(`[opencode-llama-cpp] Model loading completed`, {modelId})
+                log.info(`Model loading completed`, {modelId})
             } else if (status === 'error') {
-                console.warn(`[opencode-llama-cpp] Model loading failed`, {modelId, error})
+                log.warn(`Model loading failed`, {modelId, error})
             } else if (status === 'loading') {
-                console.info(`[opencode-llama-cpp] Model loading started`, {modelId})
+                log.info(`Model loading started`, {modelId})
             }
         }
     }

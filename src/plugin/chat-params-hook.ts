@@ -1,159 +1,86 @@
+import type {Plugin} from "@opencode/plugin"
+
+type PluginContext = Plugin.Context
 import {ModelStatusCache} from '../cache/model-status-cache'
-import {ToastNotifier} from '../ui/toast-notifier'
-import {categorizeError, findSimilarModels, generateAutoFixSuggestions, retryWithBackoff} from '../utils'
 import {getLoadedModels} from './get-loaded-models'
 import {normalizeBaseURL} from '../utils/llama-cpp-api'
-import {isLlamaCppProvider, isPluginHookInput, isValidModel, safeAsyncOperation} from '../utils/validation'
+import {categorizeError, findSimilarModels, retryWithBackoff} from '../utils'
+import {log} from '../utils/log'
 
 const modelStatusCache = new ModelStatusCache()
 
-export function createChatParamsHook(toastNotifier: ToastNotifier) {
-    return async (input: any, output: any) => {
-        // Validate input
-        if (!isPluginHookInput(input)) {
-            console.error("[opencode-llama-cpp] Invalid chat.params input")
+export async function createChatParamsHook(ctx: PluginContext): Promise<(() => Promise<void>) | void> {
+    // Register session context hook for model validation
+    const registration = await ctx.session.hook("context", async (event) => {
+        const modelID = event.model?.id
+        const providerID = event.model?.providerID
+
+        // Only validate llama.cpp models
+        if (providerID !== 'llama.cpp' || !modelID) {
             return
         }
 
-        const {sessionID, model, provider} = input // agent and message not used
+        try {
+            // Get base URL and original model ID from catalog
+            const providers = await ctx.catalog.provider.list()
+            const provider = providers.data?.find((p: any) => p.id === 'llama.cpp')
 
-        // Validate required fields
-        if (!isValidModel(model)) {
-            console.error("[opencode-llama-cpp] Invalid model object")
-            return
-        }
-
-        if (!isLlamaCppProvider(provider)) {
-            // Not a llama.cpp provider, skip
-            return
-        }
-
-
-        const baseURL = normalizeBaseURL(provider.options?.baseURL || "http://127.0.0.1:1234")
-
-        // Show loading notification
-        await safeAsyncOperation(
-            () => toastNotifier.progress(`Checking model ${model.id}...`, "Model Validation", 10),
-            undefined,
-            (error: Error) => console.warn("[opencode-llama-cpp] Failed to show progress toast:", error)
-        )
-
-        // Use retry logic for model validation
-        const validationResult = await retryWithBackoff(
-            async () => {
-                const loadedModels = await getLoadedModels(baseURL)
-                const isModelLoaded = loadedModels.includes(model.id)
-
-                if (!isModelLoaded) {
-                    throw new Error(`Model '${model.id}' not loaded`)
-                }
-
-                return loadedModels
-            },
-            2, // Max 2 retries for model validation
-            500 // 500ms base delay
-        )
-
-        if (!validationResult.success || !validationResult.result) {
-            // Categorize error and provide smart suggestions
-            const errorCategory = categorizeError(validationResult.error || "Validation operation failed", {
-                baseURL,
-                modelId: model.id
-            })
-            const autoFixSuggestions = generateAutoFixSuggestions(errorCategory)
-
-            console.warn("[opencode-llama-cpp] Model validation failed", {
-                sessionID,
-                model: model.id,
-                error: validationResult.error,
-                errorType: errorCategory.type,
-                severity: errorCategory.severity,
-                baseURL
-            })
-
-            // Get available models for similarity matching
-            let availableModels: string[] = []
-            try {
-                availableModels = await getLoadedModels(baseURL)
-            } catch (e) {
-                console.warn("[opencode-llama-cpp] Failed to get available models for suggestions", {error: e})
+            if (!provider) {
+                log.warn("Provider not found in catalog")
+                return
             }
 
-            // Use enhanced similarity matching
-            const similarModels = findSimilarModels(model.id, availableModels)
-
-            // Show error toast
-            await toastNotifier.error(
-                `Model '${model.id}' not ready: ${errorCategory.message}`,
-                "Model Validation Failed",
-                8000
+            const baseURL = normalizeBaseURL(
+                (provider as any).settings?.baseURL || "http://127.0.0.1:1234"
             )
 
-            // Provide comprehensive error response
-            if (!output.options) {
-                output.options = {}
-            }
-            output.options.llamaCppValidation = {
-                status: "error",
-                model: model.id,
-                availableModels,
-                errorCategory: errorCategory.type,
-                severity: errorCategory.severity,
-                message: errorCategory.message,
-                canRetry: errorCategory.canRetry,
-                autoFixAvailable: errorCategory.autoFixAvailable,
-                autoFixSuggestions,
-                steps: errorCategory.type === 'not_found' ? [
-                    "1. Start the llama.cpp server",
-                    "2. Click the search icon (🔍) in the sidebar",
-                    "3. Search for your desired model",
-                    "4. Click 'Download' and wait for completion",
-                    "5. Load the model after download",
-                    "6. Ensure the server is running",
-                    "7. Try your request again"
-                ] : [
-                    "1. Start the llama.cpp server",
-                    "2. Verify the server is active (green indicator)",
-                    "3. Check the server URL and port",
-                    "4. Try loading the model manually",
-                    "5. Retry your request"
-                ],
-                similarModels: similarModels.map(item => ({
-                    model: item.model,
-                    similarity: Math.round(item.similarity * 100),
-                    reason: item.reason
-                }))
-            }
-        } else {
-            const cacheStats = modelStatusCache.getStats()
-            const cacheEntry = cacheStats.entries.find(entry => entry.baseURL === baseURL)
-            const cacheAge = cacheEntry ? cacheEntry.age : 0
+            // Validate model is loaded with retry logic
+            const validationResult = await retryWithBackoff(
+                async () => {
+                    const loadedModels = await getLoadedModels(baseURL)
+                    const isModelLoaded = loadedModels.includes(modelID)
 
-            const loadedModels = validationResult.result || []
+                    if (!isModelLoaded) {
+                        throw new Error(`Model '${modelID}' not loaded`)
+                    }
 
-            // Show success toast
-            await toastNotifier.success(`Model '${model.id}' is ready to use`, "Model Validated")
-
-            if (!output.options) {
-                output.options = {}
-            }
-            output.options.llamaCppValidation = {
-                status: "success",
-                model: model.id,
-                availableModels: loadedModels,
-                message: `Model '${model.id}' is loaded and ready.`,
-                cacheInfo: {
-                    age: cacheAge,
-                    valid: modelStatusCache.isValid(baseURL),
-                    totalCacheEntries: cacheStats.size
+                    return loadedModels
                 },
-                performanceHint: loadedModels.length > 1
-                    ? `Note: ${loadedModels.length} models loaded. Consider unloading unused models for better performance.`
-                    : cacheAge > 20000 // Cache is getting old
-                        ? `Cache is ${Math.round(cacheAge / 1000)}s old. Consider refreshing if model status seems outdated.`
-                        : undefined
+                2, // Max 2 retries
+                500 // 500ms base delay
+            )
+
+            if (!validationResult.success) {
+                // Model not loaded - add warning to context
+                const errorCategory = categorizeError(validationResult.error || "Validation failed", {
+                    baseURL,
+                    modelId: modelID
+                })
+
+                log.warn("Model validation failed", {
+                    model: modelID,
+                    error: validationResult.error,
+                    errorType: errorCategory.type,
+                    severity: errorCategory.severity,
+                    baseURL
+                })
+
+                // Add system message warning about model status
+                event.system.push({
+                    type: "text",
+                    text: `[llama.cpp warning] Model '${modelID}' is not currently loaded on the llama.cpp server at ${baseURL}. ` +
+                          `The request may fail. Error: ${errorCategory.message}`
+                })
+            } else {
+                log.debug(`Model '${modelID}' validated successfully`)
             }
+        } catch (error) {
+            log.error("Model validation error", {error: String(error)})
         }
+    })
+
+    // Return cleanup function
+    return async () => {
+        await registration.dispose()
     }
 }
-

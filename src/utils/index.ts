@@ -1,4 +1,5 @@
 import type {AutoFixSuggestion, ModelValidationError, SimilarModel} from '../types'
+import {log} from './log'
 
 export {formatModelName, extractModelOwner} from './format-model-name'
 
@@ -90,7 +91,7 @@ export async function retryWithBackoff<T>(
             }
 
             const delay = baseDelay * Math.pow(2, attempt)
-            console.warn(`[opencode-llama-cpp] Retrying operation after ${delay}ms`, {
+            log.warn(`Retrying operation after ${delay}ms`, {
                 attempt: attempt + 1,
                 maxRetries: maxRetries + 1,
                 error: error instanceof Error ? error.message : String(error)
