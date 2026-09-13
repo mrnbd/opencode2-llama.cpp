@@ -12,7 +12,6 @@ import {log} from '../utils/log'
  * - Dynamic model discovery from llama.cpp API
  * - Real-time model validation with smart error handling
  * - Comprehensive caching system with API call reduction
- * - Toast notifications for better UX
  */
 export const LlamaCppPlugin = Plugin.define({
     id: "llama-cpp",

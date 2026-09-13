@@ -4,13 +4,11 @@ type PluginContext = Plugin.Context
 import {existsSync, readFileSync} from 'fs'
 import {join} from 'path'
 import stripJsonComments from 'strip-json-comments'
-import {ModelStatusCache} from '../cache/model-status-cache'
+import {modelStatusCache} from '../cache'
 import {categorizeModel, extractModelOwner, formatModelName} from '../utils'
 import {autoDetectLlamaCpp, checkLlamaCppHealth, discoverLlamaCppModels, normalizeBaseURL} from '../utils/llama-cpp-api'
 import type {LlamaCppModel} from '../types'
 import {log} from '../utils/log'
-
-const modelStatusCache = new ModelStatusCache()
 
 // Default llama.cpp URL
 const DEFAULT_LLAMA_CPP_URL = "http://127.0.0.1:1234"
