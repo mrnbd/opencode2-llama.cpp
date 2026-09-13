@@ -16,6 +16,11 @@ export function extractModelOwner(modelId: string): string | undefined {
  * Creates readable titles like "Qwen3 30B A3B" instead of "qwen/qwen3-30b-a3b"
  */
 export function formatModelName(model: LlamaCppModel): string {
+    // Prefer the API-provided name if available
+    if (model.name && model.name.trim().length > 0) {
+        return model.name.trim()
+    }
+
     const {id} = model
 
     // Extract parts from model ID

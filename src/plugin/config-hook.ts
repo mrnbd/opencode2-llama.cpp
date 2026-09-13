@@ -5,7 +5,7 @@ import {existsSync, readFileSync} from 'fs'
 import {join} from 'path'
 import stripJsonComments from 'strip-json-comments'
 import {ModelStatusCache} from '../cache/model-status-cache'
-import {extractModelOwner, formatModelName} from '../utils'
+import {categorizeModel, extractModelOwner, formatModelName} from '../utils'
 import {autoDetectLlamaCpp, checkLlamaCppHealth, discoverLlamaCppModels, normalizeBaseURL} from '../utils/llama-cpp-api'
 import type {LlamaCppModel} from '../types'
 import {log} from '../utils/log'
@@ -152,6 +152,53 @@ function applyModelInfo(model: LlamaCppModel, modelInfo: any) {
     const owner = extractModelOwner(model.id)
     if (owner) {
         modelInfo.organizationOwner = owner
+    }
+
+    const contextSize = model.context_length || model.context_window
+    if (contextSize) {
+        modelInfo.limit = {
+            ...modelInfo.limit,
+            context: contextSize,
+        }
+    }
+
+    const outputSize = model.meta?.llamaswap?.limit?.output
+    if (outputSize) {
+        modelInfo.limit = {
+            ...modelInfo.limit,
+            output: outputSize,
+        }
+    }
+
+    if (model.created) {
+        modelInfo.time = {
+            ...modelInfo.time,
+            released: model.created,
+        }
+    }
+
+    const supportsTools = model.capabilities?.function_calling === true
+        || model.supported_parameters?.includes("tools") === true
+    modelInfo.capabilities = {
+        ...modelInfo.capabilities,
+        tools: supportsTools,
+    }
+
+    const modelType = categorizeModel(model.id)
+    if (modelType === 'embedding') {
+        modelInfo.capabilities.input = ["text"]
+        modelInfo.capabilities.output = ["embedding"]
+    } else if (modelType === 'chat') {
+        const inputModalities = model.architecture?.input_modalities
+        if (inputModalities && inputModalities.length > 0) {
+            modelInfo.capabilities.input = inputModalities
+        } else {
+            const hasVision = model.capabilities?.vision === true
+            const input = ["text"]
+            if (hasVision) input.push("image")
+            modelInfo.capabilities.input = input
+        }
+        modelInfo.capabilities.output = ["text"]
     }
 }
 

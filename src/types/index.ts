@@ -1,9 +1,31 @@
 // Core types for llama.cpp plugin
+export interface LlamaCppModelArchitecture {
+    input_modalities?: string[]
+}
+
+export interface LlamaCppModelCapabilities {
+    function_calling?: boolean
+    vision?: boolean
+}
+
 export interface LlamaCppModel {
     id: string
     object: string
     created: number
     owned_by: string
+    name?: string
+    context_length?: number
+    context_window?: number
+    architecture?: LlamaCppModelArchitecture
+    capabilities?: LlamaCppModelCapabilities
+    supported_parameters?: string[]
+    meta?: {
+        llamaswap?: {
+            limit?: {
+                output?: number
+            }
+        }
+    }
 }
 
 export interface LlamaCppModelsResponse {
