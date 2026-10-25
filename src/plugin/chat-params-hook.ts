@@ -5,6 +5,7 @@ import {getLoadedModels} from './get-loaded-models'
 import {normalizeBaseURL} from '../utils/llama-cpp-api'
 import {categorizeError, retryWithBackoff} from '../utils'
 import {log} from '../utils/log'
+import {isLlamaCppProvider} from './provider-options'
 
 export async function createChatParamsHook(ctx: PluginContext): Promise<(() => Promise<void>) | void> {
     // Register session context hook for model validation
@@ -13,19 +14,20 @@ export async function createChatParamsHook(ctx: PluginContext): Promise<(() => P
         const providerID = event.model?.providerID
 
         // Only validate llama.cpp models
-        if (providerID !== 'llama.cpp' || !modelID) {
+        if (!providerID || !modelID) {
             return
         }
 
         try {
-            // Get base URL and original model ID from catalog
-            const providers = await ctx.catalog.provider.list()
-            const provider = providers.data?.find((p: any) => p.id === 'llama.cpp')
+            // Read OpenCode's resolved provider settings.
+            const {data: provider} = await ctx.provider.get({providerID})
 
             if (!provider) {
-                log.warn("Provider not found in catalog")
+                log.warn("Provider not found")
                 return
             }
+
+            if (!isLlamaCppProvider(provider)) return
 
             const baseURL = normalizeBaseURL(
                 (provider as any).settings?.baseURL || "http://127.0.0.1:1234"
